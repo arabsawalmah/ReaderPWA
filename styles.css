@@ -229,6 +229,39 @@ textarea:focus {
   gap: 8px;
 }
 
+.source-control {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #eef1ef;
+}
+
+.source-control button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.source-control button.active {
+  background: var(--surface);
+  color: var(--accent-dark);
+  box-shadow: 0 1px 4px rgba(26, 39, 34, 0.12);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
 .voice-mode {
   display: flex;
   grid-column: 1 / -1;
