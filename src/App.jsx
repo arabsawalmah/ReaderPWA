@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const arabicPattern = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/u;
 const englishPattern = /[A-Za-z]/;
-
 function segmentText(text) {
   const tokens =
     text.match(
@@ -48,15 +47,19 @@ function voiceLabel(voice) {
 
 export default function App() {
   const [text, setText] = useState(() => localStorage.getItem("reader-text") || "");
+  const [backgroundImage, setBackgroundImage] = useState(
+    () => localStorage.getItem("reader-background") || "",
+  );
   const [voices, setVoices] = useState([]);
   const [arabicVoiceUri, setArabicVoiceUri] = useState("");
   const [englishVoiceUri, setEnglishVoiceUri] = useState("");
   const [rate, setRate] = useState(() => {
     const savedRate = Number(localStorage.getItem("reader-rate"));
-    return savedRate >= 0.5 && savedRate <= 1.5 ? savedRate : 1;
+    return savedRate >= 0.5 && savedRate <= 4 ? savedRate : 1;
   });
   const [status, setStatus] = useState("idle");
   const textareaRef = useRef(null);
+  const backgroundInputRef = useRef(null);
   const queueRef = useRef([]);
   const indexRef = useRef(0);
   const sessionRef = useRef(0);
@@ -80,6 +83,12 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("reader-rate", String(rate));
   }, [rate]);
+
+  useEffect(() => {
+    document.body.style.backgroundImage = `url("${
+      backgroundImage || "/nature-background.jpg"
+    }")`;
+  }, [backgroundImage]);
 
   useEffect(() => {
     if (!supported) return undefined;
@@ -201,6 +210,40 @@ export default function App() {
     textareaRef.current?.focus();
   }
 
+  function changeBackground(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      const maxDimension = 1920;
+      const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      try {
+        localStorage.setItem("reader-background", dataUrl);
+        setBackgroundImage(dataUrl);
+      } catch {
+        setBackgroundImage(dataUrl);
+      }
+
+      URL.revokeObjectURL(objectUrl);
+      event.target.value = "";
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      event.target.value = "";
+    };
+    image.src = objectUrl;
+  }
+
   const isReading = status === "speaking" || status === "paused";
   const statusLabel = {
     idle: "جاهز",
@@ -217,9 +260,26 @@ export default function App() {
           <h1>اقرأ أي نص بصوت واضح</h1>
           <p className="subtitle">العربية والإنجليزية والأرقام في النص نفسه.</p>
         </div>
-        <div className={`status ${status}`} role="status" aria-live="polite">
-          <span className="status-dot" />
-          <span>{statusLabel}</span>
+        <div className="header-actions">
+          <button
+            className="background-button"
+            type="button"
+            onClick={() => backgroundInputRef.current?.click()}
+          >
+            <span aria-hidden="true">▧</span>
+            <span>تغيير الخلفية</span>
+          </button>
+          <input
+            ref={backgroundInputRef}
+            className="visually-hidden"
+            type="file"
+            accept="image/*"
+            onChange={changeBackground}
+          />
+          <div className={`status ${status}`} role="status" aria-live="polite">
+            <span className="status-dot" />
+            <span>{statusLabel}</span>
+          </div>
         </div>
       </header>
 
@@ -297,7 +357,7 @@ export default function App() {
             id="rate"
             type="range"
             min="0.5"
-            max="1.5"
+            max="4"
             value={rate}
             step="0.1"
             onChange={(event) => setRate(Number(event.target.value))}
@@ -342,6 +402,14 @@ export default function App() {
           المتصفح الحالي لا يدعم القراءة الصوتية. استخدم Chrome أو Edge بإصدار حديث.
         </p>
       )}
+
+      <p className="photo-credit">
+        صورة الخلفية بواسطة{" "}
+        <a href="https://unsplash.com/photos/sptlOGs9XGs" target="_blank" rel="noreferrer">
+          QQ Z
+        </a>
+      </p>
+
     </main>
   );
 }

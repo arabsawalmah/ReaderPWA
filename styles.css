@@ -19,11 +19,7 @@
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    linear-gradient(90deg, rgba(19, 122, 88, 0.035) 1px, transparent 1px),
-    linear-gradient(rgba(19, 122, 88, 0.035) 1px, transparent 1px),
-    var(--background);
-  background-size: 32px 32px;
+  background: #10141c url("/nature-background.jpg") center / cover no-repeat fixed;
   color: var(--text);
 }
 
@@ -47,6 +43,8 @@ input {
 }
 
 .app {
+  position: relative;
+  z-index: 1;
   width: min(920px, calc(100% - 32px));
   margin: 0 auto;
   padding: 56px 0 40px;
@@ -58,6 +56,10 @@ input {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
 }
 
 .eyebrow {
@@ -88,6 +90,42 @@ h1 {
   padding-bottom: 7px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.header-actions {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 12px;
+}
+
+.background-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.background-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .status-dot {
@@ -180,6 +218,10 @@ textarea:focus {
   grid-template-columns: 1fr 1fr;
   gap: 18px 22px;
   margin-top: 24px;
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
 }
 
 .field {
@@ -234,6 +276,10 @@ input[type="range"] {
   display: flex;
   gap: 12px;
   margin-top: 26px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
 }
 
 .controls button {
@@ -291,7 +337,25 @@ button:disabled {
   color: #7b2929;
 }
 
+.photo-credit {
+  width: fit-content;
+  margin: 24px auto 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #39413e;
+  font-size: 0.75rem;
+}
+
+.photo-credit a {
+  color: var(--accent-dark);
+}
+
 @media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
+  }
+
   .app {
     width: min(100% - 20px, 920px);
     padding-top: 28px;
@@ -299,11 +363,21 @@ button:disabled {
 
   .app-header {
     display: block;
+    padding: 16px;
   }
 
   .status {
     margin-top: 15px;
     padding: 0;
+  }
+
+  .header-actions {
+    justify-items: start;
+    margin-top: 16px;
+  }
+
+  .status {
+    margin-top: 0;
   }
 
   textarea {
