@@ -53,6 +53,12 @@ export default function App() {
   const [voices, setVoices] = useState([]);
   const [arabicVoiceUri, setArabicVoiceUri] = useState("");
   const [englishVoiceUri, setEnglishVoiceUri] = useState("");
+  const [unifiedVoiceUri, setUnifiedVoiceUri] = useState(
+    () => localStorage.getItem("reader-unified-voice") || "",
+  );
+  const [useUnifiedVoice, setUseUnifiedVoice] = useState(
+    () => localStorage.getItem("reader-use-unified-voice") !== "false",
+  );
   const [rate, setRate] = useState(() => {
     const savedRate = Number(localStorage.getItem("reader-rate"));
     return savedRate >= 0.5 && savedRate <= 4 ? savedRate : 1;
@@ -83,6 +89,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("reader-rate", String(rate));
   }, [rate]);
+
+  useEffect(() => {
+    localStorage.setItem("reader-use-unified-voice", String(useUnifiedVoice));
+  }, [useUnifiedVoice]);
+
+  useEffect(() => {
+    if (unifiedVoiceUri) {
+      localStorage.setItem("reader-unified-voice", unifiedVoiceUri);
+    }
+  }, [unifiedVoiceUri]);
 
   useEffect(() => {
     const defaultBackground = `${import.meta.env.BASE_URL}nature-background.jpg`;
@@ -119,6 +135,18 @@ export default function App() {
           ""
         );
       });
+
+      setUnifiedVoiceUri((current) => {
+        if (availableVoices.some((voice) => voice.voiceURI === current)) return current;
+        return (
+          availableVoices.find((voice) => voice.lang.toLowerCase() === "ar-sa")
+            ?.voiceURI ||
+          availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("ar"))
+            ?.voiceURI ||
+          availableVoices[0]?.voiceURI ||
+          ""
+        );
+      });
     };
 
     loadVoices();
@@ -148,10 +176,14 @@ export default function App() {
       }
 
       const utterance = new SpeechSynthesisUtterance(segment.text);
-      const voiceUri = segment.language === "ar" ? arabicVoiceUri : englishVoiceUri;
+      const voiceUri = useUnifiedVoice
+        ? unifiedVoiceUri
+        : segment.language === "ar"
+          ? arabicVoiceUri
+          : englishVoiceUri;
       const voice = voices.find((item) => item.voiceURI === voiceUri);
 
-      utterance.lang = voice?.lang || (segment.language === "ar" ? "ar-SA" : "en-US");
+      utterance.lang = segment.language === "ar" ? "ar-SA" : "en-US";
       utterance.voice = voice || null;
       utterance.rate = rate;
       utterance.pitch = 1;
@@ -168,7 +200,15 @@ export default function App() {
 
       window.speechSynthesis.speak(utterance);
     },
-    [arabicVoiceUri, englishVoiceUri, finishReading, rate, voices],
+    [
+      arabicVoiceUri,
+      englishVoiceUri,
+      finishReading,
+      rate,
+      unifiedVoiceUri,
+      useUnifiedVoice,
+      voices,
+    ],
   );
 
   function startReading() {
@@ -315,39 +355,69 @@ export default function App() {
       </section>
 
       <section className="settings" aria-label="إعدادات الصوت">
-        <div className="field">
-          <label htmlFor="arabicVoice">الصوت العربي</label>
-          <select
-            id="arabicVoice"
-            value={arabicVoiceUri}
-            disabled={!arabicVoices.length}
-            onChange={(event) => setArabicVoiceUri(event.target.value)}
-          >
-            {!arabicVoices.length && <option value="">سيستخدم المتصفح الصوت المتاح</option>}
-            {arabicVoices.map((voice) => (
-              <option key={voice.voiceURI} value={voice.voiceURI}>
-                {voiceLabel(voice)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <label className="voice-mode">
+          <input
+            type="checkbox"
+            checked={useUnifiedVoice}
+            onChange={(event) => setUseUnifiedVoice(event.target.checked)}
+          />
+          <span>استخدم نفس الصوت للعربية والإنجليزية</span>
+        </label>
 
-        <div className="field">
-          <label htmlFor="englishVoice">الصوت الإنجليزي</label>
-          <select
-            id="englishVoice"
-            value={englishVoiceUri}
-            disabled={!englishVoices.length}
-            onChange={(event) => setEnglishVoiceUri(event.target.value)}
-          >
-            {!englishVoices.length && <option value="">سيستخدم المتصفح الصوت المتاح</option>}
-            {englishVoices.map((voice) => (
-              <option key={voice.voiceURI} value={voice.voiceURI}>
-                {voiceLabel(voice)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {useUnifiedVoice ? (
+          <div className="field unified-voice-field">
+            <label htmlFor="unifiedVoice">الصوت الموحّد</label>
+            <select
+              id="unifiedVoice"
+              value={unifiedVoiceUri}
+              disabled={!voices.length}
+              onChange={(event) => setUnifiedVoiceUri(event.target.value)}
+            >
+              {!voices.length && <option value="">سيستخدم المتصفح الصوت المتاح</option>}
+              {voices.map((voice) => (
+                <option key={voice.voiceURI} value={voice.voiceURI}>
+                  {voiceLabel(voice)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="arabicVoice">الصوت العربي</label>
+              <select
+                id="arabicVoice"
+                value={arabicVoiceUri}
+                disabled={!arabicVoices.length}
+                onChange={(event) => setArabicVoiceUri(event.target.value)}
+              >
+                {!arabicVoices.length && <option value="">سيستخدم المتصفح الصوت المتاح</option>}
+                {arabicVoices.map((voice) => (
+                  <option key={voice.voiceURI} value={voice.voiceURI}>
+                    {voiceLabel(voice)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="englishVoice">الصوت الإنجليزي</label>
+              <select
+                id="englishVoice"
+                value={englishVoiceUri}
+                disabled={!englishVoices.length}
+                onChange={(event) => setEnglishVoiceUri(event.target.value)}
+              >
+                {!englishVoices.length && <option value="">سيستخدم المتصفح الصوت المتاح</option>}
+                {englishVoices.map((voice) => (
+                  <option key={voice.voiceURI} value={voice.voiceURI}>
+                    {voiceLabel(voice)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
         <div className="field rate-field">
           <div className="range-heading">
