@@ -161,6 +161,28 @@ h1 {
   font-weight: 700;
 }
 
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.text-button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.text-button:hover {
+  background: #f0f2f0;
+}
+
 .icon-button {
   display: grid;
   width: 32px;
@@ -360,6 +382,16 @@ input[type="range"] {
 .primary-button:hover {
   border-color: var(--accent-dark);
   background: var(--accent-dark);
+}
+
+.selection-button {
+  border: 1px solid var(--accent);
+  background: #e8f4ef;
+  color: var(--accent-dark);
+}
+
+.selection-button:hover:not(:disabled) {
+  background: #d8ebe3;
 }
 
 .secondary-button {

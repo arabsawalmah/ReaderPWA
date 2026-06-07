@@ -73,6 +73,7 @@ export function App() {
       () => localStorage.getItem("reader-cloud-voice") || "",
   );
   const [cloudError, setCloudError] = useState("");
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [rate, setRate] = useState(() => {
     const savedRate = Number(localStorage.getItem("reader-rate"));
     return savedRate >= 0.5 && savedRate <= 4 ? savedRate : 1;
@@ -89,6 +90,10 @@ export function App() {
   const supported =
       "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
   const segments = useMemo(() => segmentText(text), [text]);
+  const selectedText = useMemo(
+      () => text.slice(selection.start, selection.end),
+      [selection.end, selection.start, text],
+  );
   const arabicVoices = useMemo(
       () => voices.filter((voice) => voice.lang.toLowerCase().startsWith("ar")),
       [voices],
@@ -261,10 +266,12 @@ export function App() {
       ],
   );
 
-  async function startReading() {
-    if (!text.trim()) {
+  async function startReading(readingText) {
+    const content = readingText.trim();
+
+    if (!content) {
       textareaRef.current?.focus();
-      setStatus("empty");
+      setStatus(readingText === selectedText ? "selection-empty" : "empty");
       return;
     }
 
@@ -282,7 +289,7 @@ export function App() {
         const response = await fetch(speechApiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text.trim(), voice: cloudVoice, rate }),
+          body: JSON.stringify({ text: content, voice: cloudVoice, rate }),
         });
 
         if (!response.ok) {
@@ -312,7 +319,7 @@ export function App() {
 
     sessionRef.current += 1;
     window.speechSynthesis.cancel();
-    queueRef.current = segments;
+    queueRef.current = segmentText(content);
     indexRef.current = 0;
     setStatus("speaking");
     speakNext(sessionRef.current);
@@ -360,7 +367,21 @@ export function App() {
   function clearText() {
     stopReading();
     setText("");
+    setSelection({ start: 0, end: 0 });
     textareaRef.current?.focus();
+  }
+
+  function updateSelection(event) {
+    setSelection({
+      start: event.currentTarget.selectionStart,
+      end: event.currentTarget.selectionEnd,
+    });
+  }
+
+  function selectAllText() {
+    textareaRef.current?.focus();
+    textareaRef.current?.select();
+    setSelection({ start: 0, end: text.length });
   }
 
   function changeBackground(event) {
@@ -404,6 +425,7 @@ export function App() {
     speaking: "جاري القراءة",
     paused: "متوقف مؤقتاً",
     loading: "جاري تجهيز الصوت",
+    "selection-empty": "حدد جزءاً من النص",
   }[status];
 
   return (
@@ -442,15 +464,20 @@ export function App() {
             <label id="text-label" htmlFor="text">
               النص
             </label>
-            <button
-                className="icon-button"
-                type="button"
-                title="مسح النص"
-                aria-label="مسح النص"
-                onClick={clearText}
-            >
-              <span aria-hidden="true">×</span>
-            </button>
+            <div className="editor-actions">
+              <button className="text-button" type="button" onClick={selectAllText}>
+                تحديد الكل
+              </button>
+              <button
+                  className="icon-button"
+                  type="button"
+                  title="مسح النص"
+                  aria-label="مسح النص"
+                  onClick={clearText}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
           </div>
           <textarea
               ref={textareaRef}
@@ -459,11 +486,19 @@ export function App() {
               spellCheck="true"
               placeholder="مثال: مرحباً، موعدنا tomorrow at 5:30 مساءً."
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                updateSelection(event);
+              }}
+              onSelect={updateSelection}
           />
           <div className="text-meta">
             <span>{text.length} حرف</span>
-            <span>{segments.length} مقطع صوتي</span>
+            <span>
+              {selectedText.length
+                  ? `${selectedText.length} حرف محدد`
+                  : `${segments.length} مقطع صوتي`}
+            </span>
           </div>
         </section>
 
@@ -603,10 +638,24 @@ export function App() {
                 status === "loading" ||
                 (speechSource === "device" && !supported)
               }
-              onClick={startReading}
+              onClick={() => startReading(text)}
           >
             <span className="button-icon" aria-hidden="true">▶</span>
-            <span>ابدأ القراءة</span>
+            <span>قراءة النص كاملاً</span>
+          </button>
+          <button
+              className="selection-button"
+              type="button"
+              disabled={
+                !selectedText.trim() ||
+                status === "speaking" ||
+                status === "loading" ||
+                (speechSource === "device" && !supported)
+              }
+              onClick={() => startReading(selectedText)}
+          >
+            <span className="button-icon" aria-hidden="true">▶</span>
+            <span>قراءة المحدد</span>
           </button>
           <button
               className="secondary-button"
