@@ -85,8 +85,9 @@ export default function App() {
   }, [rate]);
 
   useEffect(() => {
+    const defaultBackground = `${import.meta.env.BASE_URL}nature-background.jpg`;
     document.body.style.backgroundImage = `url("${
-      backgroundImage || "/nature-background.jpg"
+      backgroundImage || defaultBackground
     }")`;
   }, [backgroundImage]);
 
