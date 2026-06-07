@@ -45,6 +45,21 @@ function voiceLabel(voice) {
   return `${voice.name} (${voice.lang})${voice.default ? " — افتراضي" : ""}`;
 }
 
+function wordLengthAt(text, start) {
+  const match = text.slice(start).match(/^[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/u);
+  return match?.[0].length || 1;
+}
+
+function trackingParts(text) {
+  return [...text.matchAll(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*|[^\p{L}\p{N}]+/gu)].map(
+      (match) => ({
+        text: match[0],
+        start: match.index,
+        end: match.index + match[0].length,
+      }),
+  );
+}
+
 const speechApiUrl = import.meta.env.VITE_SPEECH_API_URL || "/api/speech";
 const cloudSpeechEnabled = import.meta.env.VITE_ENABLE_CLOUD_SPEECH === "true";
 
@@ -74,6 +89,8 @@ export function App() {
   );
   const [cloudError, setCloudError] = useState("");
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [readingContent, setReadingContent] = useState("");
+  const [activeWord, setActiveWord] = useState(null);
   const [rate, setRate] = useState(() => {
     const savedRate = Number(localStorage.getItem("reader-rate"));
     return savedRate >= 0.5 && savedRate <= 4 ? savedRate : 1;
@@ -86,6 +103,7 @@ export function App() {
   const sessionRef = useRef(0);
   const audioRef = useRef(null);
   const audioUrlRef = useRef("");
+  const trackingRef = useRef(null);
 
   const supported =
       "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -94,6 +112,7 @@ export function App() {
       () => text.slice(selection.start, selection.end),
       [selection.end, selection.start, text],
   );
+  const readingParts = useMemo(() => trackingParts(readingContent), [readingContent]);
   const arabicVoices = useMemo(
       () => voices.filter((voice) => voice.lang.toLowerCase().startsWith("ar")),
       [voices],
@@ -161,6 +180,12 @@ export function App() {
   }, [backgroundImage]);
 
   useEffect(() => {
+    trackingRef.current
+        ?.querySelector(".tracking-word.active")
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeWord]);
+
+  useEffect(() => {
     if (!supported) return undefined;
 
     const loadVoices = () => {
@@ -217,6 +242,7 @@ export function App() {
   const finishReading = useCallback(() => {
     queueRef.current = [];
     indexRef.current = 0;
+    setActiveWord(null);
     setStatus("idle");
   }, []);
 
@@ -242,6 +268,21 @@ export function App() {
         utterance.voice = voice || null;
         utterance.rate = rate;
         utterance.pitch = 1;
+        utterance.onstart = () => {
+          const start = segment.offset;
+          setActiveWord({
+            start,
+            end: start + wordLengthAt(readingContent, start),
+          });
+        };
+        utterance.onboundary = (event) => {
+          if (event.name && event.name !== "word") return;
+          const start = segment.offset + event.charIndex;
+          setActiveWord({
+            start,
+            end: start + (event.charLength || wordLengthAt(readingContent, start)),
+          });
+        };
         utterance.onend = () => {
           if (activeSession !== sessionRef.current) return;
           indexRef.current += 1;
@@ -260,6 +301,7 @@ export function App() {
         englishVoiceUri,
         finishReading,
         rate,
+        readingContent,
         unifiedVoiceUri,
         useUnifiedVoice,
         voices,
@@ -274,6 +316,9 @@ export function App() {
       setStatus(readingText === selectedText ? "selection-empty" : "empty");
       return;
     }
+
+    setReadingContent(content);
+    setActiveWord(null);
 
     if (speechSource === "cloud") {
       if (!cloudVoice) {
@@ -319,7 +364,12 @@ export function App() {
 
     sessionRef.current += 1;
     window.speechSynthesis.cancel();
-    queueRef.current = segmentText(content);
+    let offset = 0;
+    queueRef.current = segmentText(content).map((segment) => {
+      const item = { ...segment, offset };
+      offset += segment.text.length;
+      return item;
+    });
     indexRef.current = 0;
     setStatus("speaking");
     speakNext(sessionRef.current);
@@ -501,6 +551,34 @@ export function App() {
             </span>
           </div>
         </section>
+
+        {readingContent && (
+            <section className="tracking-panel" aria-label="متابعة القراءة">
+              <div className="tracking-heading">
+                <strong>متابعة القراءة</strong>
+                <span>{activeWord ? "الكلمة الحالية" : "جاهز للقراءة"}</span>
+              </div>
+              <div ref={trackingRef} className="tracking-text" dir="auto" aria-live="off">
+                {readingParts.map((part) => {
+                  const isWord = /[\p{L}\p{N}]/u.test(part.text);
+                  const isActive =
+                      isWord &&
+                      activeWord &&
+                      part.start < activeWord.end &&
+                      part.end > activeWord.start;
+
+                  return (
+                      <span
+                          key={`${part.start}-${part.end}`}
+                          className={`tracking-word${isActive ? " active" : ""}`}
+                      >
+                        {part.text}
+                      </span>
+                  );
+                })}
+              </div>
+            </section>
+        )}
 
         <section className="settings" aria-label="إعدادات الصوت">
           {cloudSpeechEnabled && (

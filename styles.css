@@ -235,6 +235,49 @@ textarea:focus {
   font-size: 0.82rem;
 }
 
+.tracking-panel {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+}
+
+.tracking-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tracking-heading span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.tracking-text {
+  max-height: 190px;
+  overflow: auto;
+  padding: 18px;
+  font-size: 1.15rem;
+  line-height: 2;
+  white-space: pre-wrap;
+}
+
+.tracking-word {
+  border-radius: 3px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tracking-word.active {
+  padding: 2px 4px;
+  background: #ffdf6e;
+  color: #17201d;
+  box-shadow: 0 0 0 2px rgba(255, 223, 110, 0.28);
+}
+
 .settings {
   display: grid;
   grid-template-columns: 1fr 1fr;
